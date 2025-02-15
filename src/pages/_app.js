@@ -1,9 +1,10 @@
 import Layout from '../components/Layout/layout';
 import 'tailwindcss/tailwind.css';
-import { config } from '@/config';
-import Web3ModalProvider from '@/context';
+// import { config } from '@/config';
+// import Web3ModalProvider from '@/context';
 import Tutorial from "@/components/Tutorial/onboarding";
 import { useState, useEffect } from 'react';
+import { WalletProvider } from "@/provider/WalletProvider";
 
 export default function MyApp({ Component, pageProps }) {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -35,11 +36,11 @@ export default function MyApp({ Component, pageProps }) {
   }, []);
 
   return (
-    <Web3ModalProvider>
+    <WalletProvider>
       <Layout>
         {showTutorial && <Tutorial />}
         <Component {...pageProps} />
       </Layout>
-    </Web3ModalProvider>
+    </WalletProvider>
   );
 }

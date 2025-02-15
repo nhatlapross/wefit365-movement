@@ -18,38 +18,40 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useAccount, useWriteContract, useReadContract } from 'wagmi'
-import { abi } from '@/abi/abi'
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
 
 export default function NFTSlider({ onNFTUse }) {
   // State to hold NFTs with default empty array
   const [nfts, setNFTs] = useState([])
   const [selectedNFT, setSelectedNFT] = useState(null)
-  
-  const { address } = useAccount()
-  const { 
-    data: hash, 
-    writeContract, 
-    isSuccess: isRedeemSuccess, 
-    error: redeemError 
-  } = useWriteContract();
-  const [isMinting, setIsMinting] = useState(false);
+  const { account, signAndSubmitTransaction } = useWallet();
+  const [ addresses, setAddresses] = useState(null);
+  const [hash,setHash] = useState(null);
+  const { nftDetails, setnftDetails } = useState(null);
+  const { isLoading, setIsLoading } = useState(null);
+  const { error, setError } = useState(null);
 
+  useEffect(() => {
+    setAddresses(account.address);
+    
+  }, [account])
+
+  const [isMinting, setIsMinting] = useState(false);
   // Fetch NFTs using useReadContract
-  const { 
-    data: nftDetails, 
-    isLoading, 
-    error, 
-    refetch: refetchNFTDetails 
-  } = useReadContract({
-    abi: abi,
-    address: process.env.NEXT_PUBLIC_WEFIT_NFT,
-    functionName: 'getNFTDetailsByAddress',
-    args: [address],
-    query: {
-      enabled: !!address
-    }
-  })
+  // const { 
+  //   data: nftDetails, 
+  //   isLoading, 
+  //   error, 
+  //   refetch: refetchNFTDetails 
+  // } = useReadContract({
+  //   abi: abi,
+  //   address: process.env.NEXT_PUBLIC_WEFIT_NFT,
+  //   functionName: 'getNFTDetailsByAddress',
+  //   args: [address],
+  //   query: {
+  //     enabled: !!address
+  //   }
+  // })
 
   // Transform contract NFT data to component's NFT interface
   useEffect(() => {
@@ -93,20 +95,20 @@ export default function NFTSlider({ onNFTUse }) {
       setIsMinting(false)
       alert("Unable to redeem points");
     }
+    const response = await signAndSubmitTransaction({
+      sender: account.address,
+      data: {
+        function: `${process.env.NEXT_PUBLIC_APTOS_CONTRACT}::challenge_nft::redeem_points`,
+        functionArguments: [selectedNFT.tokenId, selectedNFT.points],
+      },
+    }).then((res) =>{
+      console.log(res);
+      setHash(res.hash);
+
+    }).finally(() =>{
+
+    });
   }
-
-  useEffect(() => {
-    if (isRedeemSuccess) {
-      // Reload NFT details
-      refetchNFTDetails()
-
-      // Reset minting state
-      setIsMinting(false)
-      
-      // Close modal
-      handleCloseModal()
-    }
-  }, [isRedeemSuccess])
 
   const handleUseNFT = () => {
     if (!selectedNFT) return

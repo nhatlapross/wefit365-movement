@@ -4,20 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import NFTSlider from "./nft-slider"
 import { Dumbbell, Flame, Coins, PersonStanding, PackageOpen } from 'lucide-react'
-import { useAccount, useBalance, useReadContract } from 'wagmi'
-import { abi } from '@/abi/abi'
+// import { useAccount, useBalance, useReadContract } from 'wagmi'
+// import { abi } from '@/abi/abi'
 import { Skeleton } from "@/components/ui/skeleton";
 import ETHIcon from "@/asset/icon/ETHIcon";
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk"
 
 // Default fallback profile in case no NFT details are available
 const defaultProfile = {
   avatar: "/avatar/buffalo1.png",
-  title: "Cardano Fitness Enthusiast",
+  title: "Mover Fitness Enthusiast",
   subtitle: "Pushing limits, one block at a time.",
   description: "Blockchain developer by day, fitness junkie by night. Leveraging Cardano for a healthier future."
 }
 
 export default function ProfilePage() {
+  const config = new AptosConfig({ network: Network.TESTNET });
+  const aptos = new Aptos(config);
   const [userStats, setUserStats] = useState({
     level: 10,
     points: 1567,
@@ -29,25 +33,34 @@ export default function ProfilePage() {
   const [myBalance, SetMyBalance] = useState(0);
   const [currentProfile, setCurrentProfile] = useState(defaultProfile);
   const [isNFTSelected, setIsNFTSelected] = useState(false);
-  const { address } = useAccount()
 
-  const { data: balance } = useBalance({
-    address: address
-  })
+  const { account, signAndSubmitTransaction } = useWallet();
+  const { nftDetails, setnftDetails } = useState(null);
 
   useEffect(() => {
-    SetMyBalance(balance?.formatted)
-  }, [balance])
-
-  const { data: nftDetails, isLoading, error } = useReadContract({
-    abi: abi,
-    address: process.env.NEXT_PUBLIC_WEFIT_NFT,
-    functionName: 'getNFTDetailsByAddress',
-    args: [address],
-    query: {
-      enabled: !!address
+    const getNFTbyAddress =  async(walletAddress) =>{
+      console.log(walletAddress);
+      const tokens = await aptos.getAccountTokensCount({ accountAddress: walletAddress });
+      console.log(tokens);
     }
-  })
+
+    if(account != null)
+      getNFTbyAddress(account?.address);
+  }, [account])
+
+  // useEffect(() => {
+  //   SetMyBalance(balance?.formatted)
+  // }, [balance])
+
+  // const { data: nftDetails, isLoading, error } = useReadContract({
+  //   abi: abi,
+  //   address: process.env.NEXT_PUBLIC_WEFIT_NFT,
+  //   functionName: 'getNFTDetailsByAddress',
+  //   args: [address],
+  //   query: {
+  //     enabled: !!address
+  //   }
+  // })
 
   const handleNFTUse = (nft) => {
     if (nft) {
@@ -96,7 +109,7 @@ export default function ProfilePage() {
     }
   }, [nftDetails])
 
-  if (!address) {
+  if (!account?.address) {
     return (
       <div className="container mx-auto p-4 space-y-6 bg-gray-900 text-white">
         <Card>

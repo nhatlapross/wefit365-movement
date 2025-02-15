@@ -3,16 +3,17 @@ import React, { useEffect, useState } from 'react';
 import { Wallet, Menu, X } from 'lucide-react';
 import { Dumbbell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useWeb3Modal } from '@web3modal/wagmi/react'
-import { useAccount, useDisconnect } from 'wagmi';
+// import { useWeb3Modal } from '@web3modal/wagmi/react'
+// import { useAccount, useDisconnect } from 'wagmi';
+import { WalletName,useWallet } from '@aptos-labs/wallet-adapter-react'
 
 const CardanoNavbar = () => {
   //const [isWalletConnected, setIsWalletConnected] = useState(false);
   const router = useRouter();
-  const { open } = useWeb3Modal();
-  const { disconnect } = useDisconnect();
+  //const { open } = useWeb3Modal();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { address, isConnected } = useAccount();
+
+  const { account, connected, wallet, changeNetwork,connect,disconnect } = useWallet();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -23,6 +24,16 @@ const CardanoNavbar = () => {
     localStorage.setItem("dayNFT",'');
     disconnect();
   }
+
+  // Connect to wallet
+  const handleConnect = async () => {
+    try {
+      await connect("Petra");
+      // You can replace "Petra" with any supported wallet name
+    } catch (error) {
+      console.error('Failed to connect to wallet:', error);
+    }
+  };
 
   return (
     <nav className="relative flex justify-between items-center p-4 bg-gray-800 text-white">
@@ -53,10 +64,10 @@ const CardanoNavbar = () => {
       </div>
 
       <div className="hidden md:flex items-center space-x-4">
-        {isConnected ? (
+        {connected ? (
           <div className="flex items-center space-x-2">
             <Wallet className="w-5 h-5" />
-            <span className="text-sm">{`${address?.slice(0, 6)}...${address?.slice(-4)}`}</span>
+            <span className="text-sm">{`${account?.address?.slice(0, 6)}...${account?.address?.slice(-4)}`}</span>
             <button
               onClick={disconectWallet}
               className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-sm"
@@ -67,7 +78,7 @@ const CardanoNavbar = () => {
         ) : (
           // <CardanoWalletList />
           <button
-            onClick={() => open()}
+            onClick={() => handleConnect()}
             className="bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded flex items-center space-x-2 text-sm"
           >
             <Wallet className="w-4 h-4" />
@@ -84,11 +95,11 @@ const CardanoNavbar = () => {
             <a className="hover:text-gray-300" onClick={() => router.push('/hackathon')}>Hackathon</a>
             <a className="hover:text-gray-300" onClick={() => router.push('/profile')}>Profile</a>
             <a className="hover:text-gray-300" onClick={() => router.push('/marketplace')}>Market</a>
-            {isConnected ? (
+            {connected ? (
               <div className="flex flex-col items-center space-y-2">
                 <div className="flex items-center space-x-2">
                   <Wallet className="w-5 h-5" />
-                  <span>{`${address?.slice(0, 6)}...${address?.slice(-4)}`}</span>
+                  <span>{`${account?.address?.slice(0, 6)}...${account?.address?.slice(-4)}`}</span>
                 </div>
                 <button
                   onClick={disconnect}
@@ -100,7 +111,7 @@ const CardanoNavbar = () => {
             ) : (
               // <CardanoWalletList />
               <button
-              onClick={() => open()}
+              onClick={() => handleConnect()}
               className="bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded flex items-center space-x-2 text-sm"
             >
               <Wallet className="w-4 h-4" />

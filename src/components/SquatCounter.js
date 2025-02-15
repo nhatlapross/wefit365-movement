@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { CheckCircle, Maximize2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useWriteContract } from 'wagmi'
-import { abi } from '@/abi/abi'
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
 
 // Safely check for browser environment
 const isBrowser = typeof window !== 'undefined';
@@ -457,21 +456,19 @@ const AdvancedSquatCounter = () => {
 
   const completeMission = async () => {
     setIsMinting(true);
-    console.log(getCurrentDate());
-    let currentDate = getCurrentDate();
-    try {
-      await writeContract({
-        abi: abi,
-        address: process.env.NEXT_PUBLIC_WEFIT_NFT,
-        functionName: 'completeMission',
-        args: [userNFT, parseInt(dayNFT) + 1],
-      });
-    } catch (error) {
-      console.error('Minting failed:', error);
-      alert('Claim failed!');
+    const response = await signAndSubmitTransaction({
+      sender: account.address,
+      data: {
+        function: `${process.env.NEXT_PUBLIC_APTOS_CONTRACT}::challenge_nft::complete_mission`,
+        functionArguments: [userNFT,parseInt(dayNFT) + 1],
+      },
+    }).then((res) =>{
+      console.log(res);
       localStorage.setItem("dayNFT", (parseInt(dayNFT) + 1).toString());
       router.push('/mission');
-    }
+    }).finally(() =>{
+      //setIsMinting(false);
+    });
   }
 
   useEffect(() => {
