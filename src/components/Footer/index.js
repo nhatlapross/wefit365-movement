@@ -40,7 +40,7 @@ const AIFitnessFooter = () => {
         <div className="space-y-4">
           <h3 className="text-xl font-semibold mb-4">Connect With Us</h3>
           <div className="flex space-x-4">
-            <a href="https://wefit365.onrender.com" className="text-gray-300 hover:text-blue-500 transition">
+            <a href="https://movefit.onrender.com" className="text-gray-300 hover:text-blue-500 transition">
               <Github className="w-6 h-6" />
             </a>
             <a href="https://x.com/Wefit365Inc" className="text-gray-300 hover:text-blue-500 transition">
