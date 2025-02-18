@@ -4,14 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import NFTSlider from "./nft-slider"
 import { Dumbbell, Flame, Coins, PersonStanding, PackageOpen } from 'lucide-react'
-// import { useAccount, useBalance, useReadContract } from 'wagmi'
-// import { abi } from '@/abi/abi'
 import { Skeleton } from "@/components/ui/skeleton";
 import ETHIcon from "@/asset/icon/ETHIcon";
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk"
+import AptosIcon from "@/asset/icon/AptosIcon";
 
-// Default fallback profile in case no NFT details are available
 const defaultProfile = {
   avatar: "/avatar/buffalo1.png",
   title: "Mover Fitness Enthusiast",
@@ -23,74 +21,81 @@ export default function ProfilePage() {
   const config = new AptosConfig({ network: Network.TESTNET });
   const aptos = new Aptos(config);
   const [userStats, setUserStats] = useState({
-    level: 10,
-    points: 1567,
-    lastUpdateDay: 68,
     level: 1,
+    points: 1567,
+    last_update_day: 68,
     currentNFT: null
   })
 
-  const [myBalance, SetMyBalance] = useState(0);
+  const [myBalance, setMyBalance] = useState(0);
   const [currentProfile, setCurrentProfile] = useState(defaultProfile);
   const [isNFTSelected, setIsNFTSelected] = useState(false);
+  const [nftDetails, setNftDetails] = useState([]); 
 
-  const { account, signAndSubmitTransaction } = useWallet();
-  const { nftDetails, setnftDetails } = useState(null);
+  const { account } = useWallet();
 
   useEffect(() => {
-    const getNFTbyAddress =  async(walletAddress) =>{
-      console.log(walletAddress);
-      const tokens = await aptos.getAccountTokensCount({ accountAddress: walletAddress });
-      console.log(tokens);
-    }
+    const getNFTbyAddress = async() => {
+      const nfts = await aptos.view({
+        payload: {
+          function: `${process.env.NEXT_PUBLIC_APTOS_CONTRACT}::challenge_nft::get_nft_details_by_address`,
+          functionArguments: [account?.address],
+        }
+       });
 
-    if(account != null)
-      getNFTbyAddress(account?.address);
+      if(nfts.length > 0) {
+        setNftDetails(nfts[0]);
+      }
+    }
+    const getBalance = async() => {
+      try {
+        const resource = await aptos.getAccountAPTAmount({
+          accountAddress:account.address
+        });
+        console.log(resource);
+        setMyBalance(resource/100000000);
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+        return null;
+      }
+    }
+   
+
+
+    if(account != null) {
+      getNFTbyAddress();
+      getBalance();
+    }
   }, [account])
 
-  // useEffect(() => {
-  //   SetMyBalance(balance?.formatted)
-  // }, [balance])
-
-  // const { data: nftDetails, isLoading, error } = useReadContract({
-  //   abi: abi,
-  //   address: process.env.NEXT_PUBLIC_WEFIT_NFT,
-  //   functionName: 'getNFTDetailsByAddress',
-  //   args: [address],
-  //   query: {
-  //     enabled: !!address
-  //   }
-  // })
-
   const handleNFTUse = (nft) => {
-    if (nft) {
+    if (nft != null) {
       setUserStats({
         name: nft.name.toString() || '',
         level: nft.level.toString() || 0,
         points: nft.points.toString() || 0,
-        rarity: nft.rarity|| '',
-        lastUpdateDay: nft.lastUpdateDay.toString() || 0,
-        tokenUri: nft.tokenUri.toString()|| '',
-        tokenId: nft.tokenId
+        rarity: nft.rarity || '',
+        last_update_day: nft.last_update_day.toString() || 0,
+        token_uri: nft.token_uri.toString() || '',
+        token_id: nft.token_id
       })
       setIsNFTSelected(true)
-      localStorage.setItem("userNFT",nft.tokenId.toString());
-      localStorage.setItem("dayNFT",nft.lastUpdateDay.toString());
+      localStorage.setItem("userNFT", nft.token_id.toString());
+      localStorage.setItem("dayNFT", nft.last_update_day.toString());
     } else {
       setUserStats({
         name: 'unknown',
         level: 0,
         points: 0,
         rarity: '',
-        lastUpdateDay: 0,
-        tokenUri: null,
+        last_update_day: 0,
+        token_uri: null,
         currentNFT: null
       })
       setIsNFTSelected(false)
     }
   }
 
-  // If nftDetails are loaded and contain a usable NFT, use the first one
   useEffect(() => {
     if (nftDetails && nftDetails.length > 0) {
       const usingNFT = nftDetails.find(nft => nft.isUsing);
@@ -99,11 +104,9 @@ export default function ProfilePage() {
       }
 
       const nft = localStorage.getItem("userNFT");
-      console.log(nft);
       
       if(nft != null && nft != '') {
-        console.log(nftDetails)
-        handleNFTUse(nftDetails.find(x => x.tokenId.toString() == nft.toString()));
+        handleNFTUse(nftDetails.find(x => x.token_id.toString() == nft.toString()));
         setIsNFTSelected(true);
       }
     }
@@ -176,7 +179,6 @@ export default function ProfilePage() {
     )
   }
 
-  // If address exists but no NFT selected
   if (!isNFTSelected) {
     return (
       <div className="container mx-auto p-4 space-y-6 bg-gray-900 text-white">
@@ -206,7 +208,7 @@ export default function ProfilePage() {
         <CardHeader className="flex flex-row items-center space-x-4">
           <Avatar className="w-24 h-24">
             <AvatarImage
-              src={userStats.tokenUri}
+              src={userStats.token_uri}
               alt="User avatar"
             />
             <AvatarFallback>CN</AvatarFallback>
@@ -216,9 +218,6 @@ export default function ProfilePage() {
             <p className="text-muted-foreground">{userStats.rarity}</p>
           </div>
         </CardHeader>
-        {/* <CardContent>
-          <p>Fitness to earn</p>
-        </CardContent> */}
       </Card>
       <Card>
         <CardHeader>
@@ -247,7 +246,7 @@ export default function ProfilePage() {
               <Dumbbell className="text-green-500" />
               <span>Workouts Completed</span>
             </div>
-            <span className="font-bold">{userStats.lastUpdateDay.toString()} days</span>
+            <span className="font-bold">{userStats.last_update_day.toString()} days</span>
           </div>
         </CardContent>
       </Card>
@@ -258,8 +257,8 @@ export default function ProfilePage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <ETHIcon />
-              <span>ETH</span>
+              <AptosIcon />
+              <span>APT</span>
             </div>
             <span className="font-bold">{myBalance}</span>
           </div>

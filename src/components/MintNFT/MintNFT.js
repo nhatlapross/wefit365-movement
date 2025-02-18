@@ -86,7 +86,7 @@ export default function MintNFTPage() {
       console.log(hash);
       setAvatarURL(mintedNFT.url);
       setIsMinting(false);
-
+      //localStorage.setItem("userNFT",nft.tokenId.toString());
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
     }

@@ -33,11 +33,13 @@ const AdvancedSquatCounter = () => {
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const router = useRouter();
-  const { data: hash, writeContract } = useWriteContract();
+  // const { data: hash, writeContract } = useWriteContract();
   const [userNFT, setUserNFT] = useState(null);
   const [dayNFT, setDayNFT] = useState(null);
   const [backgroundOpacity, setBackgroundOpacity] = useState(0.8);
   const [doing, setDoing] = useState(false);
+  const [hash, setHash] = useState(null);
+  const { account, signAndSubmitTransaction } = useWallet();
 
   useEffect(()=>{
     setTimeout(() => {
@@ -74,7 +76,7 @@ const AdvancedSquatCounter = () => {
     setTimeout(() => setSuccessAnimation(false), 1500);
   };
 
-  const { address } = useAccount()
+  // const { address } = useAccount()
 
   useEffect(() => {
     const nft = localStorage.getItem("userNFT");
@@ -90,7 +92,7 @@ const AdvancedSquatCounter = () => {
         setDayNFT(day.toString());
       }, 100);
     }
-  }, [address]);
+  }, [account]);
 
   useEffect(() => {
     console.log(doing);
@@ -101,8 +103,6 @@ const AdvancedSquatCounter = () => {
   }, [incorrectSquats, correctSquats])
 
   useEffect(() => {
-
-
     const handleResize = () => {
       // Change the aspect ratio multiplier from 0.75 to a larger value, like 0.9
       const width = isBrowser
@@ -110,10 +110,8 @@ const AdvancedSquatCounter = () => {
         : 640;
       setWindowWidth(width);
     };
-
     // Initial setup
     handleResize();
-
     // Add resize listener
     if (isBrowser) {
       window.addEventListener('resize', handleResize);
@@ -465,6 +463,7 @@ const AdvancedSquatCounter = () => {
     }).then((res) =>{
       console.log(res);
       localStorage.setItem("dayNFT", (parseInt(dayNFT) + 1).toString());
+      setHash(res.hash);
       router.push('/mission');
     }).finally(() =>{
       //setIsMinting(false);
@@ -481,19 +480,9 @@ const AdvancedSquatCounter = () => {
     }
   }, [hash])
 
-
-
-  const getCurrentDate = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}${month}${day}`;
-  };
-
   useEffect(() => {
     const checkMission = async () => {
-      if (correctSquats == 5) {
+      if (correctSquats == 10) {
         setShowRewardModal(true);
         // window.alert("Your mission success!");
       }

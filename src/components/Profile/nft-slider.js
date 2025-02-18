@@ -19,51 +19,59 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk"
 
 export default function NFTSlider({ onNFTUse }) {
+  const config = new AptosConfig({ network: Network.TESTNET });
+  const aptos = new Aptos(config);
+
   // State to hold NFTs with default empty array
   const [nfts, setNFTs] = useState([])
   const [selectedNFT, setSelectedNFT] = useState(null)
   const { account, signAndSubmitTransaction } = useWallet();
-  const [ addresses, setAddresses] = useState(null);
-  const [hash,setHash] = useState(null);
-  const { nftDetails, setnftDetails } = useState(null);
-  const { isLoading, setIsLoading } = useState(null);
-  const { error, setError } = useState(null);
+  const [hash, setHash] = useState(null);
+  const [nftDetails, setNftDetails] = useState([]); // Fixed useState declaration
+  const [isLoading, setIsLoading] = useState(false); // Fixed useState declaration
+  const [error, setError] = useState(null); // Fixed useState declaration
 
   useEffect(() => {
-    setAddresses(account.address);
+    const getNFTbyAddress = async() => {
+      try {
+        const nfts = await aptos.view({
+          payload: {
+            function: `${process.env.NEXT_PUBLIC_APTOS_CONTRACT}::challenge_nft::get_nft_details_by_address`,
+            functionArguments: [account?.address],
+          }
+         })
+
+        if(nfts.length > 0) {
+          setNftDetails(nfts[0]); // Using the correct setter function
+        }
+      } catch (err) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
     
+    if(account != null) {
+      getNFTbyAddress(account?.address);
+    }
   }, [account])
 
   const [isMinting, setIsMinting] = useState(false);
-  // Fetch NFTs using useReadContract
-  // const { 
-  //   data: nftDetails, 
-  //   isLoading, 
-  //   error, 
-  //   refetch: refetchNFTDetails 
-  // } = useReadContract({
-  //   abi: abi,
-  //   address: process.env.NEXT_PUBLIC_WEFIT_NFT,
-  //   functionName: 'getNFTDetailsByAddress',
-  //   args: [address],
-  //   query: {
-  //     enabled: !!address
-  //   }
-  // })
 
   // Transform contract NFT data to component's NFT interface
   useEffect(() => {
     if (nftDetails && Array.isArray(nftDetails)) {
       const transformedNFTs = nftDetails.map((nft) => ({
-        tokenId: nft.tokenId,
-        lastUpdateDay: nft.lastUpdateDay,
+        token_id: nft.token_id,
+        last_update_day: nft.last_update_day,
         level: nft.level,
         name: nft.name,
         points: nft.points,
         rarity: nft.rarity,
-        tokenUri: nft.tokenUri,
+        token_uri: nft.token_uri,
         isUsing: false,
         isSelling: false
       }))
@@ -84,27 +92,15 @@ export default function NFTSlider({ onNFTUse }) {
 
   const redeemPoint = async () => {
     setIsMinting(true);
-    try {
-      await writeContract({
-        abi: abi,
-        address: process.env.NEXT_PUBLIC_WEFIT_NFT,
-        functionName: 'redeemPoints',
-        args: [selectedNFT.tokenId, selectedNFT.points],
-      });
-    } catch (error) {
-      setIsMinting(false)
-      alert("Unable to redeem points");
-    }
     const response = await signAndSubmitTransaction({
       sender: account.address,
       data: {
         function: `${process.env.NEXT_PUBLIC_APTOS_CONTRACT}::challenge_nft::redeem_points`,
-        functionArguments: [selectedNFT.tokenId, selectedNFT.points],
+        functionArguments: [selectedNFT.token_id, selectedNFT.points],
       },
     }).then((res) =>{
-      console.log(res);
       setHash(res.hash);
-
+      setIsMinting(false);
     }).finally(() =>{
 
     });
@@ -114,7 +110,7 @@ export default function NFTSlider({ onNFTUse }) {
     if (!selectedNFT) return
 
     const updatedNFTs = nfts.map(nft => {
-      if (nft.tokenId === selectedNFT.tokenId) {
+      if (nft.token_id === selectedNFT.token_id) {
         return { 
           ...nft, 
           isUsing: !nft.isUsing,
@@ -128,7 +124,7 @@ export default function NFTSlider({ onNFTUse }) {
       }
     })
     
-    const usedNFT = updatedNFTs.find(nft => nft.tokenId === selectedNFT.tokenId && nft.isUsing)
+    const usedNFT = updatedNFTs.find(nft => nft.token_id === selectedNFT.token_id && nft.isUsing)
     
     setNFTs(updatedNFTs)
     onNFTUse && onNFTUse(usedNFT || null)
@@ -150,7 +146,7 @@ export default function NFTSlider({ onNFTUse }) {
       <Carousel className="w-full max-w-xs mx-auto">
         <CarouselContent>
           {nfts.map((nft) => (
-            <CarouselItem key={nft.tokenId}>
+            <CarouselItem key={nft.token_id}>
               <Card>
                 <CardContent 
                   className={`
@@ -165,7 +161,7 @@ export default function NFTSlider({ onNFTUse }) {
                   <div className="text-center">
                     <div className="relative">
                       <Image
-                        src={nft.tokenUri}
+                        src={nft.token_uri}
                         alt={nft.name}
                         width={150}
                         height={150}
@@ -222,16 +218,16 @@ export default function NFTSlider({ onNFTUse }) {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Image
-                  src={selectedNFT.tokenUri}
+                  src={selectedNFT.token_uri}
                   alt={selectedNFT.name}
                   width={100}
                   height={100}
                   className="col-span-2 mx-auto rounded-lg"
                 />
                 <div className="col-span-2 space-y-2">
-                  <p><strong>Token ID:</strong> {selectedNFT.tokenId.toString()}</p>
+                  <p><strong>Token ID:</strong>{selectedNFT.token_id}</p>
                   <p><strong>Level:</strong> {selectedNFT.level.toString()}</p>
-                  <p><strong>Last Update:</strong> {selectedNFT.lastUpdateDay.toString()}</p>
+                  <p><strong>Last Update:</strong> {selectedNFT.last_update_day.toString()}</p>
                   <p><strong>Points:</strong> {selectedNFT.points.toString()}</p>
                   <p><strong>Rarity:</strong> {selectedNFT.rarity}</p>
                 </div>
